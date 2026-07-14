@@ -1,7 +1,7 @@
 import requests
-from bs4 import BeautifulSoup
 import json
 import os
+from playwright.sync_api import sync_playwright
 
 STATE_FILE = "last_popup.json"
 BOT_TOKEN = os.environ["BOT_TOKEN"]
@@ -10,10 +10,23 @@ URL = "https://earthstore.kr/home"
 
 
 def get_popup_image():
-    res = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
-    soup = BeautifulSoup(res.text, "html.parser")
-    img = soup.select_one("div#popup img.popupContent")
-    return img["src"] if img and img.get("src") else None
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        page.goto(URL, wait_until="networkidle", timeout=30000)
+        # 팝업이 JS로 뒤늦게 채워지는 구조라 잠깐 대기
+        page.wait_for_timeout(3000)
+
+        src = None
+        try:
+            el = page.query_selector("div#popup img.popupContent")
+            if el:
+                src = el.get_attribute("src")
+        except Exception:
+            pass
+
+        browser.close()
+        return src if src else None
 
 
 def load_last():
