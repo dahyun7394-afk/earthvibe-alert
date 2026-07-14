@@ -1,0 +1,39 @@
+name: Check Earth Bib Popup
+
+on:
+  schedule:
+    # UTC 기준. 5분마다 실행 (한국시간 기준 5분 간격과 동일)
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}  # 수동 실행 버튼도 생김
+
+permissions:
+  contents: write  # 상태 파일(last_popup.json)을 저장소에 커밋하기 위함
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 팝업 체크 실행
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python check_popup.py
+
+      - name: 상태 파일 변경사항 커밋
+        run: |
+          git config user.name "popup-bot"
+          git config user.email "popup-bot@users.noreply.github.com"
+          git add last_popup.json
+          git diff --staged --quiet || git commit -m "update popup state"
+          git push
