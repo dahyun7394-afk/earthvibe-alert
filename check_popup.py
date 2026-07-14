@@ -42,44 +42,16 @@ def save_last(src):
 
 
 def send_telegram_photo(image_url):
-    resp = requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto",
-        data={
-            "chat_id": CHAT_ID,
-            "caption": "🐄 어쓰빕(earthstore.kr) 새 팝업 감지!\n" + image_url,
-            "photo": image_url,
+    # 사이트에서 이미지를 직접 받아서(핫링크 차단 우회) 텔레그램에 파일로 업로드
+    img_resp = requests.get(
+        image_url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Referer": "https://earthstore.kr/",
         },
         timeout=15,
     )
-    resp.raise_for_status()
+    img_resp.raise_for_status()
 
-
-def send_telegram_text(msg):
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": msg},
-        timeout=15,
-    )
-
-
-def check():
-    try:
-        current = get_popup_image()
-    except Exception as e:
-        # 사이트 접속 실패 등은 조용히 넘어감 (매번 알림 오면 피곤하니까)
-        print(f"요청 실패: {e}")
-        return
-
-    last = load_last()
-    print(f"이전: {last}\n현재: {current}")
-
-    if current and current != last:
-        send_telegram_photo(current)
-        save_last(current)
-        print("새 팝업 감지 -> 텔레그램 전송 완료")
-    else:
-        print("변경 없음")
-
-
-if __name__ == "__main__":
-    check()
+    resp = requests.post(
+        f"https://api.telegram.org/bot{BOT_TO
